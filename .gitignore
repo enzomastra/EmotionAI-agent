@@ -1,0 +1,24 @@
+# Entorno virtual
+venv/
+
+# Archivos de configuración y entorno
+.env
+
+# Archivos de caché y temporales
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de logs
+*.log
+
+# Archivos de prueba y datos temporales
+test_data.json
+
+# Archivos de configuración de IDE
+.vscode/
+.idea/
+
+# Otros archivos que no deben versionarse
+.DS_Store 
