@@ -5,7 +5,7 @@ from ..services.therapeutic_agent import TherapeuticAgent
 router = APIRouter()
 agent = TherapeuticAgent()
 
-@router.post("/analyze/{therapist_id}/{patient_id}")
+@router.post("/chat")
 async def analyze_patient_data(
     therapist_id: str,
     patient_id: str,

@@ -20,7 +20,7 @@ app.add_middleware(
 # Incluir rutas
 app.include_router(
     therapeutic_agent.router,
-    prefix="/api/therapeutic-agent",
+    prefix="/api/agent",
     tags=["therapeutic-agent"]
 )
 
