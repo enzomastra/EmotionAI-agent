@@ -1,52 +1,35 @@
 from fastapi import APIRouter, HTTPException
 from typing import Dict
+from pydantic import BaseModel
 from ..services.therapeutic_agent import TherapeuticAgent
 
 router = APIRouter()
 agent = TherapeuticAgent()
 
+class AgentChatRequest(BaseModel):
+    message: str
+    emotion_data: Dict
+    therapist_id: str
+    patient_id: str
+
 @router.post("/chat")
-async def analyze_patient_data(
-    therapist_id: str,
-    patient_id: str,
-    data: Dict
-) -> Dict:
+async def analyze_patient_data(request: AgentChatRequest) -> Dict:
     """
-    Analiza los datos emocionales de un paciente específico y genera recomendaciones personalizadas.
-    
-    Args:
-        therapist_id: ID del terapeuta
-        patient_id: ID del paciente
-        data: Diccionario con los datos emocionales
-            {
-                "emotion_data": {
-                    "timeline": {segundo: emoción},
-                    "emotion_summary": {emoción: conteo}
-                }
-            }
-        
-    Returns:
-        Dict con recomendaciones, análisis y recursos específicos para el paciente
+    Analiza los datos emocionales de un paciente específico y genera recomendaciones personalizadas, considerando el mensaje del usuario.
     """
     try:
-        # Validar estructura de datos
-        if "emotion_data" not in data:
-            raise HTTPException(
-                status_code=400,
-                detail="Se requiere el campo 'emotion_data'"
-            )
-            
-        emotion_data = data["emotion_data"]
+        emotion_data = request.emotion_data
         if not all(key in emotion_data for key in ['timeline', 'emotion_summary']):
             raise HTTPException(
                 status_code=400,
                 detail="Datos emocionales incompletos. Se requiere 'timeline' y 'emotion_summary'"
             )
-            
+        # Pasar el mensaje del usuario a la lógica del agente
         recommendations = await agent.generate_recommendations(
-            patient_id=patient_id,
-            therapist_id=therapist_id,
-            emotion_data=emotion_data
+            patient_id=request.patient_id,
+            therapist_id=request.therapist_id,
+            emotion_data=emotion_data,
+            user_message=request.message
         )
         return recommendations
     except Exception as e:
@@ -59,9 +42,6 @@ async def analyze_patient_data(
 async def health_check() -> Dict:
     """
     Verifica el estado del agente terapéutico.
-    
-    Returns:
-        Dict con el estado del servicio
     """
     return {
         "status": "healthy",

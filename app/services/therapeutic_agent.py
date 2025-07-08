@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from duckduckgo_search import DDGS
 from typing import List, Dict, Optional
 from datetime import datetime
+from langdetect import detect
 
 class TherapeuticAgent:
     def __init__(self):
@@ -58,40 +59,61 @@ Provide a detailed but concise analysis, focused on this specific patient."""
             print(f"Error in web search: {e}")
             return []
 
-    async def generate_recommendations(self, patient_id: str, therapist_id: str, emotion_data: Dict) -> Dict:
-        """Generates personalized recommendations for the specific patient"""
+    async def generate_recommendations(self, patient_id: str, therapist_id: str, emotion_data: Dict, user_message: str) -> Dict:
+        """Generates a clinically-focused, context-rich response for the specific patient, considering the user's message and language."""
         # Analyze patient data
         analysis = await self.analyze_patient_data(patient_id, therapist_id, emotion_data)
-        
-        # Get dominant emotion
         dominant_emotion = max(emotion_data['emotion_summary'].items(), key=lambda x: x[1])[0]
-        
-        # Search for patient-specific resources
         resources = await self.search_therapeutic_resources(
             dominant_emotion,
             f"patient {patient_id} with {dominant_emotion}"
         )
-        
-        # Generate personalized recommendations
-        prompt = f"""As a psychotherapy specialist, provide personalized recommendations for patient {patient_id} based on:
 
-Pattern Analysis:
+        # Detect language of the user message
+        try:
+            user_lang = detect(user_message)
+        except Exception:
+            user_lang = "en"
+
+        emotional_timeline = self._format_emotion_timeline(emotion_data['timeline'])
+        emotion_summary = self._format_emotion_summary(emotion_data['emotion_summary'])
+        resources_formatted = self._format_resources(resources)
+
+        prompt = f"""
+You are a clinical psychotherapy assistant. Your role is to provide the most clinically relevant, context-rich, and precise answers to the clinician's questions about a specific patient.
+
+**Instructions:**
+- Your top priority is to answer the clinician's question directly and precisely, using all available context.
+- You may elaborate and provide additional clinical context, interpretation, or relevant insights if they help the clinician, but do not lose focus on the original question.
+- Do NOT provide step-by-step plans, generic advice, or lists of actions.
+- Focus on clinical reasoning, interpretation, and evidence-based insights, always tailored to the patient's context.
+- Never state absolute truths or diagnoses; always use suggestive, professional, and non-imposing language.
+- If you are unsure, say so.
+- Your answer MUST be in the same language as the clinician's question (detected language: {user_lang}). If the question is in Spanish, answer in Spanish. If in English, answer in English. If in another language, answer in that language. Do NOT translate the question. Do NOT explain your language choice. Just answer directly in the detected language.
+
+**Patient Context:**
+- Patient ID: {patient_id}
+- Therapist ID: {therapist_id}
+- Dominant Emotion: {dominant_emotion}
+- Emotional Timeline:
+{emotional_timeline}
+- Emotion Summary:
+{emotion_summary}
+
+**Clinical Analysis:**
 {analysis['analysis']}
 
-Therapeutic Resources:
-{self._format_resources(resources)}
+**Relevant Therapeutic Resources:**
+{resources_formatted}
 
-Dominant Emotion: {dominant_emotion}
+**Clinician's Question (original language):**
+{user_message}
 
-Provide specific and relevant recommendations for this patient, such as:
-1. Immediate strategies for managing {dominant_emotion}
-2. Long-term personalized plan
-3. Specific tools
-4. Relevant additional resources
+**IMPORTANT:**
+Your answer should be concise, clinically focused, and context-aware. Do NOT provide a list of steps or a plan. Do NOT give absolute statements or diagnoses. Always maintain a professional, supportive, and suggestive tone. Prioritize answering the question, but you may elaborate if it adds clinical value.
+"""
 
-Remember these are suggestions, not absolute truths."""
-
-        print(f"\n--- Prompt para Generación de Recomendaciones del Paciente {patient_id} ---\n{prompt}\n---")
+        print(f"\n--- Prompt para Generación de Respuesta Clínica del Paciente {patient_id} ---\n{prompt}\n---")
         response = self.model.generate_content(prompt)
         
         return {
